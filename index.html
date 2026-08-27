@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Synapse Remote</title>
-  <meta name="description" content="Controle remoto seguro do seu PC via GitHub Relay para o Synapse.">
+  <meta name="description" content="Controle remoto seguro e consulta com IA ao seu PC via GitHub Relay para o Synapse.">
   <meta name="theme-color" content="#6366f1">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -27,7 +27,7 @@
         </div>
         <div class="brand-text">
           <h1>Synapse Remote</h1>
-          <span class="version-badge">Fase 2 & 3 • PWA</span>
+          <span class="version-badge">Fases 1-4 • PWA</span>
         </div>
       </div>
       <div class="connection-status" id="connectionBadge" title="Status da Conexão">
@@ -36,9 +36,13 @@
       </div>
     </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist">
-      <button class="nav-tab active" id="tabCommandBtn" role="tab" aria-selected="true" data-tab="commandTab">
+    <!-- Navigation Tabs (4 Tabs) -->
+    <nav class="nav-tabs nav-tabs-4" role="tablist">
+      <button class="nav-tab active" id="tabAskBtn" role="tab" aria-selected="true" data-tab="askTab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Perguntar</span>
+      </button>
+      <button class="nav-tab" id="tabCommandBtn" role="tab" aria-selected="false" data-tab="commandTab">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span>Comandar</span>
       </button>
@@ -48,7 +52,7 @@
       </button>
       <button class="nav-tab" id="tabConfigBtn" role="tab" aria-selected="false" data-tab="configTab">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>Configuração</span>
+        <span>Ajustes</span>
       </button>
     </nav>
 
@@ -60,8 +64,50 @@
         <button class="toast-close" id="toastCloseBtn">&times;</button>
       </div>
 
-      <!-- Tab 1: Enviar Comando -->
-      <section class="tab-pane active" id="commandTab" role="tabpanel">
+      <!-- Tab 1: Perguntar ao Cofre (AskVault RAG) -->
+      <section class="tab-pane active" id="askTab" role="tabpanel">
+        <div class="card">
+          <div class="card-header">
+            <h2>Perguntar ao Cofre (RAG)</h2>
+            <p>Converse com o cérebro das suas notas Obsidian a partir do celular. A consulta é processada com IA no seu PC.</p>
+          </div>
+
+          <form id="askVaultForm" class="form-grid">
+            <div class="form-group">
+              <label for="askQuestionInput">Sua Pergunta</label>
+              <textarea id="askQuestionInput" class="form-control ask-textarea" placeholder="ex: O que eu anotei sobre a arquitetura do projeto? Quais são as pendências?" required rows="3"></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="btnSendAsk" class="btn btn-primary btn-block">
+                <span class="btn-spinner hidden" id="askSpinner"></span>
+                <span id="btnSendAskText">Consultar Cérebro</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- AskVault Result Response Card -->
+        <div class="card status-card hidden" id="askResponseCard">
+          <div class="card-header-flex">
+            <h3>Resposta do Synapse Brain</h3>
+            <span class="badge badge-pending" id="askBadge">Consultando...</span>
+          </div>
+          <div class="progress-bar-container" id="askProgressContainer">
+            <div class="progress-bar-indeterminate"></div>
+          </div>
+          <div class="execution-details">
+            <div class="ask-response-body" id="askResponseBody">Aguardando resposta do PC...</div>
+            <div class="ask-sources-box hidden" id="askSourcesBox">
+              <span class="sources-title">📚 Fontes citadas:</span>
+              <div class="sources-chips" id="askSourcesChips"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 2: Enviar Comando -->
+      <section class="tab-pane" id="commandTab" role="tabpanel">
         <div class="card">
           <div class="card-header">
             <h2>Disparar Comando Remoto</h2>
@@ -72,6 +118,9 @@
             <div class="form-group">
               <label for="cmdTypeSelect">Tipo de Ação</label>
               <select id="cmdTypeSelect" class="form-control">
+                <optgroup label="Fase 4 — Inteligência RAG">
+                  <option value="AskVault">Perguntar ao Cofre (AskVault)</option>
+                </optgroup>
                 <optgroup label="Fase 1 — Inicialização e Foco">
                   <option value="OpenApp">Abrir Aplicativo (OpenApp)</option>
                   <option value="OpenNote">Abrir Nota no Cofre (OpenNote)</option>
@@ -114,7 +163,7 @@
         </div>
       </section>
 
-      <!-- Tab 2: Histórico de Auditoria -->
+      <!-- Tab 3: Histórico de Auditoria -->
       <section class="tab-pane" id="historyTab" role="tabpanel">
         <div class="card">
           <div class="card-header-flex">
@@ -144,7 +193,7 @@
         </div>
       </section>
 
-      <!-- Tab 3: Configurações -->
+      <!-- Tab 4: Configurações -->
       <section class="tab-pane" id="configTab" role="tabpanel">
         <div class="card">
           <div class="card-header">
@@ -173,7 +222,7 @@
               <div class="input-password-wrapper">
                 <input type="password" id="cfgToken" class="form-control" placeholder="ghp_... ou github_pat_..." required autocomplete="off">
                 <button type="button" id="btnToggleTokenVisibility" class="btn-icon" title="Mostrar/Esconder">
-                  <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
               <small class="form-hint">Recomendação: Crie um token Fine-Grained com acesso Read/Write apenas a contents deste repositório.</small>

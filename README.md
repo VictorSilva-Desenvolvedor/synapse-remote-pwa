@@ -34,6 +34,7 @@ Acesse o aplicativo hospedado via GitHub Pages:
 
 ## ⚡ Comandos Suportados
 
+- **AskVault (RAG):** Pergunta em linguagem natural ao cofre do Obsidian. O Synapse Brain no PC realiza busca vetorial semântica e gera a resposta com IA citando as fontes em `[[Wikilinks]]` (não requer confirmação por ser somente leitura).
 - **OpenApp:** Abre um aplicativo permitido no PC (ex: `notepad`, `obsidian`, `calc`).
 - **OpenNote:** Abre uma nota Markdown do cofre local com validação estrita anti-path traversal (ex: `Notas/MinhaNota.md`).
 - **FocusWindow:** Traz a janela do processo alvo para primeiro plano.

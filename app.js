@@ -1,10 +1,12 @@
-// Synapse Remote PWA Logic
+// Synapse Remote PWA Logic — Fases 1, 2, 3 e 4 (AskVault RAG)
 (function () {
   'use strict';
 
   const STORAGE_KEY = 'synapse_pwa_config';
   let isPolling = false;
   let activePollingInterval = null;
+  let isAskPolling = false;
+  let activeAskPollingInterval = null;
 
   // DOM Elements
   const tabs = document.querySelectorAll('.nav-tab');
@@ -13,7 +15,7 @@
   const connectionStatusText = document.getElementById('connectionStatusText');
   const statusDot = connectionBadge.querySelector('.status-dot');
 
-  // Forms
+  // Config Form Elements
   const configForm = document.getElementById('configForm');
   const cfgOwner = document.getElementById('cfgOwner');
   const cfgRepo = document.getElementById('cfgRepo');
@@ -23,6 +25,21 @@
   const testSpinner = document.getElementById('testSpinner');
   const btnToggleTokenVisibility = document.getElementById('btnToggleTokenVisibility');
 
+  // AskVault (Tab 1) Elements
+  const askVaultForm = document.getElementById('askVaultForm');
+  const askQuestionInput = document.getElementById('askQuestionInput');
+  const btnSendAsk = document.getElementById('btnSendAsk');
+  const btnSendAskText = document.getElementById('btnSendAskText');
+  const askSpinner = document.getElementById('askSpinner');
+
+  const askResponseCard = document.getElementById('askResponseCard');
+  const askBadge = document.getElementById('askBadge');
+  const askResponseBody = document.getElementById('askResponseBody');
+  const askProgressContainer = document.getElementById('askProgressContainer');
+  const askSourcesBox = document.getElementById('askSourcesBox');
+  const askSourcesChips = document.getElementById('askSourcesChips');
+
+  // Command Form (Tab 2) Elements
   const commandForm = document.getElementById('commandForm');
   const cmdTypeSelect = document.getElementById('cmdTypeSelect');
   const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
@@ -35,11 +52,13 @@
   const executionStatusMsg = document.getElementById('executionStatusMsg');
   const commandMeta = document.getElementById('commandMeta');
 
+  // History (Tab 3) Elements
   const historyList = document.getElementById('historyList');
   const historyLoading = document.getElementById('historyLoading');
   const historyEmpty = document.getElementById('historyEmpty');
   const btnRefreshHistory = document.getElementById('btnRefreshHistory');
 
+  // Toast
   const toastBanner = document.getElementById('toastBanner');
   const toastContent = document.getElementById('toastContent');
   const toastCloseBtn = document.getElementById('toastCloseBtn');
@@ -124,11 +143,21 @@
     }
   });
 
-  // Dynamic Fields for Command Type
+  // Dynamic Fields for Command Type (Tab 2)
   function renderDynamicFields(type) {
     dynamicFieldsContainer.innerHTML = '';
 
     switch (type) {
+      case 'AskVault':
+        dynamicFieldsContainer.innerHTML = `
+          <div class="form-group">
+            <label for="field_question">Pergunta ao Cofre</label>
+            <textarea id="field_question" class="form-control" placeholder="ex: O que eu anotei sobre a arquitetura do projeto?" required rows="3"></textarea>
+            <small class="form-hint">🧠 Processa busca semântica vetorial e RAG com IA contra as notas do cofre no PC.</small>
+          </div>
+        `;
+        break;
+
       case 'OpenApp':
         dynamicFieldsContainer.innerHTML = `
           <div class="form-group">
@@ -231,7 +260,7 @@
       showToast(`Conexão OK! Repositório: ${repoData.full_name} (${repoData.private ? 'Privado' : 'Público'})`, 'success');
       updateConnectionUI(true);
     } catch (ex) {
-      showToast(`Erro na conexão: ${ex.Message || ex.message}`, 'error');
+      showToast(`Erro na conexão: ${ex.message}`, 'error');
       updateConnectionUI(false);
     } finally {
       testSpinner.classList.add('hidden');
@@ -252,10 +281,193 @@
 
     saveConfig(config);
     showToast('Configurações salvas no navegador com sucesso!', 'success');
-    switchTab('commandTab');
+    switchTab('askTab');
   });
 
-  // Send Remote Command
+  // Helper UUID
+  function generateCommandId() {
+    return (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    }));
+  }
+
+  // TAB 1: ASK VAULT (RAG Query) Form Handler
+  askVaultForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const config = loadConfig();
+    if (!config || !config.token) {
+      showToast('Configure as credenciais do repositório primeiro.', 'error');
+      switchTab('configTab');
+      return;
+    }
+
+    const question = askQuestionInput.value.trim();
+    if (!question) {
+      showToast('Digite uma pergunta para consultar o cofre.', 'error');
+      return;
+    }
+
+    const commandId = generateCommandId();
+    const remoteCommand = {
+      id: commandId,
+      createdAt: new Date().toISOString(),
+      type: 'AskVault',
+      payload: { question: question },
+      requestedBy: 'mobile-pwa'
+    };
+
+    btnSendAsk.disabled = true;
+    askSpinner.classList.remove('hidden');
+    btnSendAskText.textContent = 'Consultando...';
+
+    askResponseCard.classList.remove('hidden');
+    askProgressContainer.classList.remove('hidden');
+    askBadge.className = 'badge badge-pending';
+    askBadge.textContent = 'Enviando...';
+    askResponseBody.textContent = 'Enviando pergunta para o PC via GitHub Relay...';
+    askSourcesBox.classList.add('hidden');
+    askSourcesChips.innerHTML = '';
+
+    try {
+      const commandJson = JSON.stringify(remoteCommand, null, 2);
+      const base64Content = utf8ToBase64(commandJson);
+      const uploadUrl = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/.synapse/remote/commands/${commandId}.json`;
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${config.token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `Remote: AskVault (${commandId.substring(0, 8)})`,
+          content: base64Content,
+          branch: config.branch
+        })
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({ message: uploadRes.statusText }));
+        throw new Error(`Falha no upload (${uploadRes.status}): ${err.message}`);
+      }
+
+      askBadge.textContent = 'Pensando...';
+      askResponseBody.textContent = 'Pergunta entregue ao PC! O Synapse Brain está pesquisando o cofre e gerando a resposta com IA...';
+
+      startAskResultPolling(commandId, config);
+    } catch (ex) {
+      askBadge.className = 'badge badge-danger';
+      askBadge.textContent = 'Erro';
+      askResponseBody.textContent = `❌ ${ex.message}`;
+      askProgressContainer.classList.add('hidden');
+      btnSendAsk.disabled = false;
+      askSpinner.classList.add('hidden');
+      btnSendAskText.textContent = 'Consultar Cérebro';
+    }
+  });
+
+  // Polling de Resultado para AskVault
+  function startAskResultPolling(commandId, config) {
+    if (isAskPolling && activeAskPollingInterval) {
+      clearInterval(activeAskPollingInterval);
+    }
+
+    isAskPolling = true;
+    const startTime = Date.now();
+    const timeoutMs = 75000; // 75s timeout
+    const resultUrl = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/.synapse/remote/results/${commandId}.json?ref=${encodeURIComponent(config.branch)}`;
+
+    activeAskPollingInterval = setInterval(async () => {
+      const elapsed = Date.now() - startTime;
+
+      if (elapsed > timeoutMs) {
+        clearInterval(activeAskPollingInterval);
+        isAskPolling = false;
+        askBadge.className = 'badge badge-danger';
+        askBadge.textContent = 'Timeout (75s)';
+        askResponseBody.textContent = 'O PC não respondeu a tempo. Certifique-se de que o Synapse Tray está em execução com a chave Gemini configurada.';
+        askProgressContainer.classList.add('hidden');
+        btnSendAsk.disabled = false;
+        askSpinner.classList.add('hidden');
+        btnSendAskText.textContent = 'Consultar Cérebro';
+        return;
+      }
+
+      try {
+        const res = await fetch(resultUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${config.token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (res.status === 200) {
+          clearInterval(activeAskPollingInterval);
+          isAskPolling = false;
+          const data = await res.json();
+          const resultContent = base64ToUtf8(data.content);
+          const resultObj = JSON.parse(resultContent);
+
+          renderAskResult(resultObj);
+        }
+      } catch {
+        // Ignora falhas temporárias no polling
+      }
+    }, 3000);
+  }
+
+  function renderAskResult(result) {
+    btnSendAsk.disabled = false;
+    askSpinner.classList.add('hidden');
+    btnSendAskText.textContent = 'Consultar Cérebro';
+    askProgressContainer.classList.add('hidden');
+
+    const status = result.status || result.Status;
+    const message = result.message || result.Message || '';
+
+    if (status === 'Success' || status === 0) {
+      askBadge.className = 'badge badge-success';
+      askBadge.textContent = 'Respondido';
+
+      // Separa fontes se houver linha "Fontes: [[...]]"
+      const sourcesIndex = message.indexOf('Fontes:');
+      if (sourcesIndex !== -1) {
+        const textOnly = message.substring(0, sourcesIndex).trim();
+        const sourcesText = message.substring(sourcesIndex);
+        askResponseBody.textContent = textOnly;
+
+        const wikiMatches = sourcesText.match(/\[\[(.*?)\]\]/g);
+        if (wikiMatches && wikiMatches.length > 0) {
+          askSourcesBox.classList.remove('hidden');
+          askSourcesChips.innerHTML = '';
+          wikiMatches.forEach(w => {
+            const chip = document.createElement('span');
+            chip.className = 'source-chip';
+            chip.textContent = `📄 ${w}`;
+            askSourcesChips.appendChild(chip);
+          });
+        }
+      } else {
+        askResponseBody.textContent = message;
+        askSourcesBox.classList.add('hidden');
+      }
+    } else if (status === 'Rejected' || status === 2) {
+      askBadge.className = 'badge badge-danger';
+      askBadge.textContent = 'Rejeitado';
+      askResponseBody.textContent = `⛔ ${message}`;
+      askSourcesBox.classList.add('hidden');
+    } else {
+      askBadge.className = 'badge badge-danger';
+      askBadge.textContent = 'Falha';
+      askResponseBody.textContent = `❌ ${message}`;
+      askSourcesBox.classList.add('hidden');
+    }
+  }
+
+  // TAB 2: SEND REMOTE COMMAND
   commandForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -270,6 +482,9 @@
     const payload = {};
 
     switch (type) {
+      case 'AskVault':
+        payload.question = document.getElementById('field_question').value.trim();
+        break;
       case 'OpenApp':
         payload.app = document.getElementById('field_app').value.trim();
         break;
@@ -289,9 +504,7 @@
         break;
     }
 
-    const commandId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    }));
+    const commandId = generateCommandId();
 
     const remoteCommand = {
       id: commandId,
@@ -312,7 +525,6 @@
     commandMeta.textContent = JSON.stringify(remoteCommand, null, 2);
 
     try {
-      // 1. Upload via GitHub REST Contents API
       const commandJson = JSON.stringify(remoteCommand, null, 2);
       const base64Content = utf8ToBase64(commandJson);
       const uploadUrl = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/.synapse/remote/commands/${commandId}.json`;
@@ -336,7 +548,6 @@
         throw new Error(`Falha no upload do comando (${uploadRes.status}): ${err.message}`);
       }
 
-      // 2. Inicia polling de resultado
       executionBadge.textContent = 'Aguardando PC...';
       const isSensitive = type === 'TypeText' || type === 'ClickElement';
       executionStatusMsg.textContent = isSensitive
@@ -354,7 +565,7 @@
     }
   });
 
-  // Polling de Resultados
+  // Polling de Resultados para Comandos Gerais
   function startResultPolling(commandId, config) {
     if (isPolling && activePollingInterval) {
       clearInterval(activePollingInterval);
@@ -362,7 +573,7 @@
 
     isPolling = true;
     const startTime = Date.now();
-    const timeoutMs = 65000; // 65s timeout
+    const timeoutMs = 65000;
     const resultUrl = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/.synapse/remote/results/${commandId}.json?ref=${encodeURIComponent(config.branch)}`;
 
     activePollingInterval = setInterval(async () => {
@@ -409,22 +620,25 @@
     sendSpinner.classList.add('hidden');
     btnSendText.textContent = 'Enviar para o PC';
 
-    if (result.status === 'Success' || result.Status === 'Success' || result.Status === 0) {
+    const status = result.status || result.Status;
+    const message = result.message || result.Message || '';
+
+    if (status === 'Success' || status === 0) {
       executionBadge.className = 'badge badge-success';
       executionBadge.textContent = 'Sucesso';
-      executionStatusMsg.textContent = `✅ ${result.message || result.Message || 'Ação executada com sucesso.'}`;
-    } else if (result.status === 'Rejected' || result.Status === 'Rejected' || result.Status === 2) {
+      executionStatusMsg.textContent = `✅ ${message || 'Ação executada com sucesso.'}`;
+    } else if (status === 'Rejected' || status === 2) {
       executionBadge.className = 'badge badge-danger';
       executionBadge.textContent = 'Rejeitado';
-      executionStatusMsg.textContent = `⛔ ${result.message || result.Message || 'Ação rejeitada ou não confirmada.'}`;
+      executionStatusMsg.textContent = `⛔ ${message || 'Ação rejeitada ou não confirmada.'}`;
     } else {
       executionBadge.className = 'badge badge-danger';
       executionBadge.textContent = 'Falha';
-      executionStatusMsg.textContent = `❌ ${result.message || result.Message || 'Falha na execução.'}`;
+      executionStatusMsg.textContent = `❌ ${message || 'Falha na execução.'}`;
     }
   }
 
-  // Fetch History (.synapse/remote-audit.log)
+  // TAB 3: FETCH HISTORY (.synapse/remote-audit.log)
   async function fetchHistory() {
     const config = loadConfig();
     if (!config || !config.token) {
