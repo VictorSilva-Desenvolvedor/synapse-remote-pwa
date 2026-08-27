@@ -1,0 +1,18 @@
+{
+  "name": "Synapse Remote",
+  "short_name": "Synapse",
+  "description": "Controle remoto e monitoramento seguro do seu PC via GitHub Relay.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#090d16",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
