@@ -1,5 +1,5 @@
 // Service Worker para Synapse Remote PWA (App Shell Cache)
-const CACHE_NAME = 'synapse-remote-shell-v1';
+const CACHE_NAME = 'synapse-remote-shell-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -33,21 +33,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Rede primeiro, cache so como reserva offline: o app shell (app.js, index.html)
+  // e atualizado com frequencia durante o desenvolvimento ativo do Synapse Remote.
+  // A estrategia anterior (cache primeiro, para sempre) prendia cada instalacao na
+  // PRIMEIRA versao baixada permanentemente - nenhuma correcao publicada aqui depois
+  // chegava no celular do usuario sem ele limpar o cache manualmente. Isso escondeu
+  // um diagnostico real por dias: o codigo no repositorio parecia correto, mas o
+  // dispositivo continuava rodando uma versao antiga travada no cache.
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
