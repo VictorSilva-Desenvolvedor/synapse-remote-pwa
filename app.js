@@ -69,7 +69,13 @@
   }
 
   function base64ToUtf8(str) {
-    return decodeURIComponent(escape(window.atob(str.replace(/\s/g, ''))));
+    const decoded = decodeURIComponent(escape(window.atob(str.replace(/\s/g, ''))));
+    // Arquivos gravados pelo Host no PC podem vir com BOM UTF-8 (comportamento padrao do
+    // Encoding.UTF8 do .NET ao escrever arquivo) - um caractere invisivel no inicio que
+    // quebra JSON.parse com "Unexpected token". Sem isso, qualquer resultado remoto ficava
+    // preso em "Pensando..." para sempre: o polling ja tinha parado (achou o 200 e limpou
+    // o interval) mas o parse falhava logo em seguida, e o catch engolia o erro em silencio.
+    return decoded.charCodeAt(0) === 0xFEFF ? decoded.slice(1) : decoded;
   }
 
   // Toast Banner
