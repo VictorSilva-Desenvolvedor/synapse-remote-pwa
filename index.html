@@ -2,249 +2,294 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Synapse Remote</title>
   <meta name="description" content="Controle remoto seguro e consulta com IA ao seu PC via GitHub Relay para o Synapse.">
-  <meta name="theme-color" content="#6366f1">
+  <meta name="theme-color" content="#1A1712">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- As MESMAS duas faces do Synapse.Tray (Resources/Fonts), servidas pelo Google Fonts:
+       Press Start 2P para rotulos curtos e Silkscreen para texto. JetBrains Mono para JSON. -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
+
+    <!-- ============================================================
+         Cabecalho: barra de titulo + faixa de status.
+         Mesmo vocabulario visual do menu da bandeja no PC — faixa
+         colorida de 6px a esquerda, estado em Press Start 2P.
+         ============================================================ -->
     <header class="app-header">
       <div class="brand">
         <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            <circle cx="12" cy="12" r="4"/>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path shape-rendering="crispEdges" fill="currentColor" d="M7 7h2v2H7zM3 3h2v2H3zM11 3h2v2h-2zM3 11h2v2H3zM11 11h2v2h-2z"/>
+            <path shape-rendering="crispEdges" fill="currentColor" opacity="0.55" d="M5 5h1v1H5zM6 6h1v1H6zM10 5h1v1h-1zM9 6h1v1H9zM5 10h1v1H5zM6 9h1v1H6zM10 10h1v1h-1zM9 9h1v1H9z"/>
           </svg>
         </div>
         <div class="brand-text">
-          <h1>Synapse Remote</h1>
-          <span class="version-badge">Fases 1-4 • PWA</span>
+          <h1>SYNAPSE REMOTE</h1>
+          <span class="version-badge">FASES 1-4</span>
         </div>
-      </div>
-      <div class="connection-status" id="connectionBadge" title="Status da Conexão">
-        <span class="status-dot"></span>
-        <span class="status-text" id="connectionStatusText">Não Configurado</span>
       </div>
     </header>
 
-    <!-- Navigation Tabs (4 Tabs) -->
-    <nav class="nav-tabs nav-tabs-4" role="tablist">
-      <button class="nav-tab active" id="tabAskBtn" role="tab" aria-selected="true" data-tab="askTab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Perguntar</span>
-      </button>
-      <button class="nav-tab" id="tabCommandBtn" role="tab" aria-selected="false" data-tab="commandTab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        <span>Comandar</span>
-      </button>
-      <button class="nav-tab" id="tabHistoryBtn" role="tab" aria-selected="false" data-tab="historyTab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>Histórico</span>
-      </button>
-      <button class="nav-tab" id="tabConfigBtn" role="tab" aria-selected="false" data-tab="configTab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>Ajustes</span>
-      </button>
-    </nav>
+    <div class="connection-status" id="connectionBadge" title="Status da conexão">
+      <span class="status-dot"></span>
+      <span class="status-body">
+        <span class="status-text" id="connectionStatusText">Não Configurado</span>
+        <span class="status-hint" aria-hidden="true"></span>
+      </span>
+    </div>
 
-    <!-- Main Content Area -->
+    <!-- ============================================================
+         Corpo: quatro fichas empilhadas. Cada cabecalho abre a sua
+         e fecha as outras — o mesmo switchTab de sempre, que ja
+         mantinha exatamente um painel visivel.
+         ============================================================ -->
     <main class="app-main">
-      <!-- Notification Banner -->
+
       <div class="toast-banner hidden" id="toastBanner">
         <div class="toast-content" id="toastContent"></div>
-        <button class="toast-close" id="toastCloseBtn">&times;</button>
+        <button class="toast-close" id="toastCloseBtn" aria-label="Fechar aviso">&times;</button>
       </div>
 
-      <!-- Tab 1: Perguntar ao Cofre (AskVault RAG) -->
-      <section class="tab-pane active" id="askTab" role="tabpanel">
-        <div class="card">
-          <div class="card-header">
-            <h2>Perguntar ao Cofre (RAG)</h2>
-            <p>Converse com o cérebro das suas notas Obsidian a partir do celular. A consulta é processada com IA no seu PC.</p>
-          </div>
+      <!-- ---------------------------------------- Ficha 1: Perguntar -->
+      <section class="acc-item">
+        <h2 class="acc-heading">
+          <button type="button" class="nav-tab active" id="tabAskBtn" data-tab="askTab"
+                  aria-controls="askTab" aria-expanded="true">
+            <span class="acc-icon">
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path shape-rendering="crispEdges" fill="currentColor" d="M2 2h12v9H7l-3 3v-3H2z"/>
+              </svg>
+            </span>
+            <span class="acc-label">PERGUNTAR</span>
+            <span class="acc-arrow" aria-hidden="true"></span>
+          </button>
+        </h2>
 
-          <form id="askVaultForm" class="form-grid">
-            <div class="form-group">
-              <label for="askQuestionInput">Sua Pergunta</label>
-              <textarea id="askQuestionInput" class="form-control ask-textarea" placeholder="ex: O que eu anotei sobre a arquitetura do projeto? Quais são as pendências?" required rows="3"></textarea>
+        <div class="tab-pane active" id="askTab" role="region" aria-labelledby="tabAskBtn">
+          <div class="card">
+            <div class="card-header">
+              <p>Converse com o cérebro das suas notas a partir do celular. A consulta roda com IA no seu PC.</p>
             </div>
 
-            <div class="form-actions">
-              <button type="submit" id="btnSendAsk" class="btn btn-primary btn-block">
-                <span class="btn-spinner hidden" id="askSpinner"></span>
-                <span id="btnSendAskText">Consultar Cérebro</span>
-              </button>
-            </div>
-          </form>
-        </div>
+            <form id="askVaultForm" class="form-grid">
+              <div class="form-group">
+                <label for="askQuestionInput">Sua pergunta</label>
+                <textarea id="askQuestionInput" class="form-control ask-textarea" placeholder="ex: o que eu anotei sobre a arquitetura do projeto?" required rows="3"></textarea>
+              </div>
 
-        <!-- AskVault Result Response Card -->
-        <div class="card status-card hidden" id="askResponseCard">
-          <div class="card-header-flex">
-            <h3>Resposta do Synapse Brain</h3>
-            <span class="badge badge-pending" id="askBadge">Consultando...</span>
-          </div>
-          <div class="progress-bar-container" id="askProgressContainer">
-            <div class="progress-bar-indeterminate"></div>
-          </div>
-          <div class="execution-details">
-            <div class="ask-response-body" id="askResponseBody">Aguardando resposta do PC...</div>
-            <div class="ask-sources-box hidden" id="askSourcesBox">
-              <span class="sources-title">📚 Fontes citadas:</span>
-              <div class="sources-chips" id="askSourcesChips"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab 2: Enviar Comando -->
-      <section class="tab-pane" id="commandTab" role="tabpanel">
-        <div class="card">
-          <div class="card-header">
-            <h2>Disparar Comando Remoto</h2>
-            <p>Os comandos trafegam em segurança pelo repositório privado do cofre via GitHub Relay.</p>
-          </div>
-
-          <form id="commandForm" class="form-grid">
-            <div class="form-group">
-              <label for="cmdTypeSelect">Tipo de Ação</label>
-              <select id="cmdTypeSelect" class="form-control">
-                <optgroup label="Fase 4 — Inteligência RAG">
-                  <option value="AskVault">Perguntar ao Cofre (AskVault)</option>
-                </optgroup>
-                <optgroup label="Fase 1 — Inicialização e Foco">
-                  <option value="OpenApp">Abrir Aplicativo (OpenApp)</option>
-                  <option value="OpenNote">Abrir Nota no Cofre (OpenNote)</option>
-                  <option value="FocusWindow">Focar Janela (FocusWindow)</option>
-                </optgroup>
-                <optgroup label="Fase 2 — Interação Sensível (Requer Confirmação no PC)">
-                  <option value="TypeText">Digitar Texto (TypeText)</option>
-                  <option value="ClickElement">Clicar em Elemento (ClickElement)</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <!-- Dynamic Fields -->
-            <div id="dynamicFieldsContainer" class="dynamic-fields">
-              <!-- Rendered via JS based on selected type -->
-            </div>
-
-            <div class="form-actions">
-              <button type="submit" id="btnSendCommand" class="btn btn-primary btn-block">
-                <span class="btn-spinner hidden" id="sendSpinner"></span>
-                <span id="btnSendText">Enviar para o PC</span>
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Real-Time Execution Status Card -->
-        <div class="card status-card hidden" id="executionCard">
-          <div class="card-header-flex">
-            <h3>Status da Execução</h3>
-            <span class="badge badge-pending" id="executionBadge">Enviando...</span>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-indeterminate" id="executionProgress"></div>
-          </div>
-          <div class="execution-details" id="executionDetails">
-            <p id="executionStatusMsg">Aguardando resposta do PC...</p>
-            <div class="command-metadata" id="commandMeta"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab 3: Histórico de Auditoria -->
-      <section class="tab-pane" id="historyTab" role="tabpanel">
-        <div class="card">
-          <div class="card-header-flex">
-            <div>
-              <h2>Trilha de Auditoria</h2>
-              <p>Histórico append-only registrado pelo PC em <code>.synapse/remote-audit.log</code>.</p>
-            </div>
-            <button id="btnRefreshHistory" class="btn btn-secondary btn-sm" title="Recarregar">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-              <span>Atualizar</span>
-            </button>
-          </div>
-
-          <div id="historyLoading" class="loading-state hidden">
-            <div class="spinner"></div>
-            <p>Buscando histórico do repositório...</p>
-          </div>
-
-          <div id="historyEmpty" class="empty-state hidden">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <p>Nenhum registro de auditoria encontrado ainda.</p>
-          </div>
-
-          <div id="historyList" class="history-feed">
-            <!-- Rendered via JS -->
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab 4: Configurações -->
-      <section class="tab-pane" id="configTab" role="tabpanel">
-        <div class="card">
-          <div class="card-header">
-            <h2>Configuração do Repositório</h2>
-            <p>Credenciais do repositório privado do cofre. O token fica salvo <strong>apenas neste navegador (localStorage)</strong> e nunca é enviado para outro servidor além da <code>api.github.com</code>.</p>
-          </div>
-
-          <form id="configForm" class="form-grid">
-            <div class="form-group">
-              <label for="cfgOwner">GitHub Owner (Usuário ou Org)</label>
-              <input type="text" id="cfgOwner" class="form-control" placeholder="ex: VictorSilva-Desenvolvedor" required>
-            </div>
-
-            <div class="form-group">
-              <label for="cfgRepo">Repositório do Cofre</label>
-              <input type="text" id="cfgRepo" class="form-control" placeholder="ex: Synapse-Vault" required>
-            </div>
-
-            <div class="form-group">
-              <label for="cfgBranch">Branch</label>
-              <input type="text" id="cfgBranch" class="form-control" value="main" placeholder="main" required>
-            </div>
-
-            <div class="form-group">
-              <label for="cfgToken">Personal Access Token (PAT)</label>
-              <div class="input-password-wrapper">
-                <input type="password" id="cfgToken" class="form-control" placeholder="ghp_... ou github_pat_..." required autocomplete="off">
-                <button type="button" id="btnToggleTokenVisibility" class="btn-icon" title="Mostrar/Esconder">
-                  <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <div class="form-actions">
+                <button type="submit" id="btnSendAsk" class="btn btn-primary btn-block">
+                  <span class="btn-spinner hidden" id="askSpinner"></span>
+                  <span id="btnSendAskText">CONSULTAR CEREBRO</span>
                 </button>
               </div>
-              <small class="form-hint">Recomendação: Crie um token Fine-Grained com acesso Read/Write apenas a contents deste repositório.</small>
-            </div>
+            </form>
+          </div>
 
-            <div class="form-actions-split">
-              <button type="button" id="btnTestConnection" class="btn btn-secondary">
-                <span class="btn-spinner hidden" id="testSpinner"></span>
-                <span>Testar Conexão</span>
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Salvar Configurações
-              </button>
+          <div class="card status-card hidden" id="askResponseCard">
+            <div class="card-header-flex">
+              <h3>Resposta do cofre</h3>
+              <span class="badge badge-pending" id="askBadge">Consultando...</span>
             </div>
-          </form>
+            <div class="progress-bar-container" id="askProgressContainer">
+              <div class="progress-bar-indeterminate"></div>
+            </div>
+            <div class="execution-details">
+              <div class="ask-response-body" id="askResponseBody">Aguardando resposta do PC...</div>
+              <div class="ask-sources-box hidden" id="askSourcesBox">
+                <span class="sources-title">Fontes citadas</span>
+                <div class="sources-chips" id="askSourcesChips"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
+      <!-- ---------------------------------------- Ficha 2: Comandar -->
+      <section class="acc-item">
+        <h2 class="acc-heading">
+          <button type="button" class="nav-tab" id="tabCommandBtn" data-tab="commandTab"
+                  aria-controls="commandTab" aria-expanded="false">
+            <span class="acc-icon acc-icon-cmd">
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path shape-rendering="crispEdges" fill="currentColor" d="M9 1L4 9h3l-1 6 6-8H9z"/>
+              </svg>
+            </span>
+            <span class="acc-label">COMANDAR</span>
+            <span class="acc-arrow" aria-hidden="true"></span>
+          </button>
+        </h2>
+
+        <div class="tab-pane" id="commandTab" role="region" aria-labelledby="tabCommandBtn">
+          <div class="card">
+            <div class="card-header">
+              <p>Os comandos trafegam pelo repositório privado do cofre. O PC lê, executa e responde.</p>
+            </div>
+
+            <form id="commandForm" class="form-grid">
+              <div class="form-group">
+                <label for="cmdTypeSelect">Tipo de ação</label>
+                <select id="cmdTypeSelect" class="form-control">
+                  <optgroup label="Inteligência (RAG)">
+                    <option value="AskVault">Perguntar ao Cofre (AskVault)</option>
+                  </optgroup>
+                  <optgroup label="Navegação">
+                    <option value="OpenApp">Abrir Aplicativo (OpenApp)</option>
+                    <option value="OpenNote">Abrir Nota no Cofre (OpenNote)</option>
+                    <option value="FocusWindow">Focar Janela (FocusWindow)</option>
+                  </optgroup>
+                  <optgroup label="Sensível — pede confirmação no PC">
+                    <option value="TypeText">Digitar Texto (TypeText)</option>
+                    <option value="ClickElement">Clicar em Elemento (ClickElement)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div id="dynamicFieldsContainer" class="dynamic-fields">
+                <!-- Montado pelo app.js conforme o tipo escolhido -->
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" id="btnSendCommand" class="btn btn-primary btn-block">
+                  <span class="btn-spinner hidden" id="sendSpinner"></span>
+                  <span id="btnSendText">ENVIAR PARA O PC</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card status-card hidden" id="executionCard">
+            <div class="card-header-flex">
+              <h3>Execução</h3>
+              <span class="badge badge-pending" id="executionBadge">Enviando...</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-indeterminate" id="executionProgress"></div>
+            </div>
+            <div class="execution-details" id="executionDetails">
+              <p id="executionStatusMsg">Aguardando resposta do PC...</p>
+              <div class="command-metadata" id="commandMeta"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------- Ficha 3: Histórico -->
+      <section class="acc-item">
+        <h2 class="acc-heading">
+          <button type="button" class="nav-tab" id="tabHistoryBtn" data-tab="historyTab"
+                  aria-controls="historyTab" aria-expanded="false">
+            <span class="acc-icon acc-icon-log">
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path shape-rendering="crispEdges" fill="currentColor" d="M2 2h3v3H2zM7 3h7v2H7zM2 7h3v3H2zM7 8h7v2H7zM2 12h3v3H2zM7 13h7v2H7z"/>
+              </svg>
+            </span>
+            <span class="acc-label">HISTORICO</span>
+            <span class="acc-arrow" aria-hidden="true"></span>
+          </button>
+        </h2>
+
+        <div class="tab-pane" id="historyTab" role="region" aria-labelledby="tabHistoryBtn">
+          <div class="card">
+            <div class="card-header-flex">
+              <p>Trilha append-only gravada pelo PC em <code>.synapse/remote-audit.log</code>.</p>
+              <button id="btnRefreshHistory" class="btn btn-secondary btn-sm" title="Recarregar">
+                <span>ATUALIZAR</span>
+              </button>
+            </div>
+
+            <div id="historyLoading" class="loading-state hidden">
+              <div class="spinner"></div>
+              <p>Buscando histórico do repositório...</p>
+            </div>
+
+            <div id="historyEmpty" class="empty-state hidden">
+              <p>Nenhum registro de auditoria ainda.</p>
+            </div>
+
+            <div id="historyList" class="history-feed">
+              <!-- Montado pelo app.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------- Ficha 4: Ajustes -->
+      <section class="acc-item">
+        <h2 class="acc-heading">
+          <button type="button" class="nav-tab" id="tabConfigBtn" data-tab="configTab"
+                  aria-controls="configTab" aria-expanded="false">
+            <span class="acc-icon acc-icon-cfg">
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path shape-rendering="crispEdges" fill="currentColor" fill-rule="evenodd" d="M6 1h4v2h2v2h2v6h-2v2h-2v2H6v-2H4v-2H2V5h2V3h2zM7 6h2v4H7z"/>
+              </svg>
+            </span>
+            <span class="acc-label">AJUSTES</span>
+            <span class="acc-arrow" aria-hidden="true"></span>
+          </button>
+        </h2>
+
+        <div class="tab-pane" id="configTab" role="region" aria-labelledby="tabConfigBtn">
+          <div class="card">
+            <div class="card-header">
+              <p>O token fica salvo <strong>apenas neste navegador</strong> e só é enviado para <code>api.github.com</code>.</p>
+            </div>
+
+            <form id="configForm" class="form-grid">
+              <div class="form-group">
+                <label for="cfgOwner">GitHub owner</label>
+                <input type="text" id="cfgOwner" class="form-control" placeholder="ex: VictorSilva-Desenvolvedor" required>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgRepo">Repositório do cofre</label>
+                <input type="text" id="cfgRepo" class="form-control" placeholder="ex: Synapse-Vault" required>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgBranch">Branch</label>
+                <input type="text" id="cfgBranch" class="form-control" value="main" placeholder="main" required>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgToken">Personal access token</label>
+                <div class="input-password-wrapper">
+                  <input type="password" id="cfgToken" class="form-control" placeholder="ghp_... ou github_pat_..." required autocomplete="off">
+                  <button type="button" id="btnToggleTokenVisibility" class="btn-icon" title="Mostrar ou esconder o token">
+                    <svg id="eyeIcon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                      <path shape-rendering="crispEdges" fill="currentColor" d="M4 5h8v1h2v1h1v2h-1v1h-2v1H4v-1H2V9H1V7h1V6h2z"/>
+                      <path shape-rendering="crispEdges" fill="#14110D" d="M7 6h2v4H7z"/>
+                    </svg>
+                  </button>
+                </div>
+                <small class="form-hint">Use um token fine-grained com acesso de leitura e escrita apenas a <em>contents</em> deste repositório.</small>
+              </div>
+
+              <div class="form-actions-split">
+                <button type="button" id="btnTestConnection" class="btn btn-secondary">
+                  <span class="btn-spinner hidden" id="testSpinner"></span>
+                  <span>TESTAR CONEXAO</span>
+                </button>
+                <button type="submit" class="btn btn-primary">SALVAR</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
     </main>
 
-    <!-- Footer -->
     <footer class="app-footer">
-      <p>Synapse Remote • 100% Self-Hosted via GitHub Relay</p>
+      <p>SYNAPSE REMOTE &middot; VIA REPOSITORIO DO COFRE</p>
     </footer>
   </div>
 

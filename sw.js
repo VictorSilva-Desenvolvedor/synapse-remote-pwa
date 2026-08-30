@@ -1,5 +1,5 @@
 // Service Worker para Synapse Remote PWA (App Shell Cache)
-const CACHE_NAME = 'synapse-remote-shell-v2';
+const CACHE_NAME = 'synapse-remote-shell-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

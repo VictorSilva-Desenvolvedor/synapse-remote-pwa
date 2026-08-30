@@ -122,7 +122,7 @@
     tabs.forEach(tab => {
       const isActive = tab.getAttribute('data-tab') === targetTabId;
       tab.classList.toggle('active', isActive);
-      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.setAttribute('aria-expanded', isActive ? 'true' : 'false');
     });
 
     panes.forEach(pane => {
