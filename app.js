@@ -393,7 +393,12 @@
         isAskPolling = false;
         askBadge.className = 'badge badge-danger';
         askBadge.textContent = 'Timeout (75s)';
-        askResponseBody.textContent = 'O PC não respondeu a tempo. Certifique-se de que o Synapse Tray está em execução com a chave Gemini configurada.';
+        // O texto anterior mandava conferir a chave do Gemini. Desde o fallback
+        // automatico Gemini->Ollama no PC (repo Synapse, commit 501fa9e), o AskVault
+        // responde tambem sem chave nenhuma — a instrucao mandava consertar algo que
+        // nao esta quebrado. Sobra o PC nao estar rodando, ou ter passado da janela:
+        // neste segundo caso a resposta ainda chega, so que depois deste texto.
+        askResponseBody.textContent = 'O PC não respondeu em 75s. Verifique se o Synapse está em execução. Se ele estiver apenas lento, a resposta ainda será gravada no cofre — refaça a pergunta para buscá-la.';
         askProgressContainer.classList.add('hidden');
         btnSendAsk.disabled = false;
         askSpinner.classList.add('hidden');
