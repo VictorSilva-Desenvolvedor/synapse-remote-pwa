@@ -109,6 +109,12 @@
                 <span class="sources-title">Fontes citadas</span>
                 <div class="sources-chips" id="askSourcesChips"></div>
               </div>
+              <!-- Aparece so quando a janela de espera estoura. O resultado fica gravado no
+                   cofre pelo id do comando, entao da para voltar a buscar o MESMO id em vez
+                   de perder uma resposta que o PC ainda vai produzir. -->
+              <button type="button" id="btnAskRecheck" class="btn btn-secondary btn-block hidden">
+                VERIFICAR DE NOVO
+              </button>
             </div>
           </div>
         </div>

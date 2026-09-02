@@ -7,6 +7,8 @@
   let activePollingInterval = null;
   let isAskPolling = false;
   let activeAskPollingInterval = null;
+  let lastAskCommandId = null;
+  let lastAskConfig = null;
 
   // DOM Elements
   const tabs = document.querySelectorAll('.nav-tab');
@@ -38,6 +40,7 @@
   const askProgressContainer = document.getElementById('askProgressContainer');
   const askSourcesBox = document.getElementById('askSourcesBox');
   const askSourcesChips = document.getElementById('askSourcesChips');
+  const btnAskRecheck = document.getElementById('btnAskRecheck');
 
   // Command Form (Tab 2) Elements
   const commandForm = document.getElementById('commandForm');
@@ -380,6 +383,12 @@
       clearInterval(activeAskPollingInterval);
     }
 
+    // Guardados para o "verificar de novo": o resultado fica gravado no cofre com este
+    // id, entao reconsultar o MESMO id recupera uma resposta que chegou tarde.
+    lastAskCommandId = commandId;
+    lastAskConfig = config;
+    btnAskRecheck.classList.add('hidden');
+
     isAskPolling = true;
     const startTime = Date.now();
     const timeoutMs = 75000; // 75s timeout
@@ -398,11 +407,15 @@
         // responde tambem sem chave nenhuma — a instrucao mandava consertar algo que
         // nao esta quebrado. Sobra o PC nao estar rodando, ou ter passado da janela:
         // neste segundo caso a resposta ainda chega, so que depois deste texto.
-        askResponseBody.textContent = 'O PC não respondeu em 75s. Verifique se o Synapse está em execução. Se ele estiver apenas lento, a resposta ainda será gravada no cofre — refaça a pergunta para buscá-la.';
+        askResponseBody.textContent = 'O PC não respondeu em 75s. Verifique se o Synapse está em execução. Se ele estiver apenas lento, a resposta ainda chega — toque em Verificar de Novo.';
         askProgressContainer.classList.add('hidden');
         btnSendAsk.disabled = false;
         askSpinner.classList.add('hidden');
         btnSendAskText.textContent = 'Consultar Cérebro';
+        // Sem isto a espera acabava aqui e pronto: um PC que respondesse em 80s gravava
+        // a resposta no cofre e este aparelho nunca a mostrava. O comando dava certo e o
+        // usuario era informado de que falhou.
+        btnAskRecheck.classList.remove('hidden');
         return;
       }
 
@@ -745,6 +758,23 @@
       historyList.appendChild(card);
     });
   }
+
+  // Retoma a espera pelo mesmo comando depois de a janela de 75s estourar.
+  btnAskRecheck.addEventListener('click', () => {
+    if (!lastAskCommandId || !lastAskConfig) {
+      return;
+    }
+
+    btnSendAsk.disabled = true;
+    askSpinner.classList.remove('hidden');
+    btnSendAskText.textContent = 'Consultando...';
+    askProgressContainer.classList.remove('hidden');
+    askBadge.className = 'badge badge-pending';
+    askBadge.textContent = 'Verificando...';
+    askResponseBody.textContent = 'Procurando a resposta no cofre...';
+
+    startAskResultPolling(lastAskCommandId, lastAskConfig);
+  });
 
   btnRefreshHistory.addEventListener('click', () => {
     fetchHistory();
